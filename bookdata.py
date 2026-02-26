@@ -11,9 +11,12 @@ cursor = conn.cursor()
 
 flag = True
 fields = ["ID","Title","Author","Date","Experience","Topic","Category","Acquisition","Priority"]
+lowerFields = [i.lower() for i in fields]
 
 def columnWidths(data):
     column_widths = []
+    if data is None:
+        return column_widths
     multi = any(isinstance(x, tuple) for x in data)
     for col in range(len(fields)):
         if multi:    
@@ -39,17 +42,22 @@ def addBook():
     print("Record added")
 
 def searchBook():
+    searchColumn = input("What field do you want to search by: ").strip().lower()
+    if searchColumn not in lowerFields:
+        print("Invalid field")
+        return
     searchTerm = input("What book do you want to search for: ")
-    cursor.execute("SELECT * FROM books WHERE title = ?",(searchTerm,))
-    row = cursor.fetchone()
-    columnData = columnWidths(row)
-    global LAYOUT
-    LAYOUT = " | ".join("{:<" + str(w) + "}" for w in columnData)
-    if row is None:
+    cursor.execute(f"SELECT * FROM books WHERE {searchColumn} = ?",(searchTerm,))
+    row = cursor.fetchall()
+    if len(row) == 0:
         print("Sorry, this record isn't present")
     else:
+        columnData = columnWidths(row)
+        global LAYOUT
+        LAYOUT = " | ".join("{:<" + str(w) + "}" for w in columnData)
         print(LAYOUT.format(*fields))
-        print(LAYOUT.format(*row))
+        for x in row:
+            print(LAYOUT.format(*x))
 
 def printall():
     cursor.execute("SELECT * FROM books")
@@ -69,6 +77,7 @@ def options():
     print("4 - update a record")
     print("5 - export data")
     print("6 - load new data")
+    print("7 - delete book")
     enter = int(input("What do you pick? "))
     return enter
 
@@ -148,9 +157,12 @@ def exportCSV(pathname):
 def loadJSON():
     pathname = input("What name is the file: ")
     print("What do you want to happen when books in the database and file have the same title?")
+    print("0 - cancel file")
     print("1 - replace the original record")
     print("2 - keep the original record")
     disambig = int(input("Enter the number corresponding to your preference: "))
+    if disambig == 0:
+        return
     try:
         with open(pathname+".json","r") as f:
             importDict = json.load(f)
@@ -169,6 +181,19 @@ def loadJSON():
                 conn.commit()
     except FileNotFoundError:
         print("Error - file not found")
+
+def deleteBook():
+    idNum = 0
+    idKnown = input("If you know the ID for your book, enter it, otherwise press enter: ")
+    while not idKnown.isnumeric():
+        print("Search for the book by title to find its ID")
+        searchBook()
+        idKnown = input("Now you have the ID, please enter it: ")
+    
+    idNum = int(idKnown)
+    cursor.execute("DELETE FROM books WHERE id = ?",(idNum,))
+    conn.commit()
+    print("Book deleted")
 
 cursor.execute("""CREATE TABLE IF NOT EXISTS books
 (id INTEGER PRIMARY KEY, title TEXT UNIQUE, author TEXT, date TEXT, experience INTEGER, topic TEXT, category TEXT, acquisition REAL, priority REAL)""")
@@ -192,6 +217,8 @@ while flag:
         exportData()
     elif choice == 6:
         loadJSON()
+    elif choice == 7:
+        deleteBook()
     else:
         print("Invalid option, sorry")
 
