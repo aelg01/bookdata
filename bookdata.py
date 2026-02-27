@@ -14,7 +14,7 @@ fields = ["ID","Title","Author","Date","Experience","Topic","Category","Acquisit
 lowerFields = [i.lower() for i in fields]
 
 def columnWidths(data):
-    column_widths = []
+    column_widths: list[int] = []
     if data is None:
         return column_widths
     multi = any(isinstance(x, tuple) for x in data)
@@ -142,15 +142,16 @@ def exportJSON(pathname):
                    "export_date": date},
                   "data":
                   rows}
-    with open(pathname+".json",'w') as f:
+    with open(pathname+".json",'w', encoding="utf-8") as f:
         json.dump(exportDict, f)
     print("File created")
 
 def exportCSV(pathname):
     cursor.execute("SELECT * FROM books")
     rows = cursor.fetchall()
-    with open(pathname+".csv", "w", newline='') as f:
+    with open(pathname+".csv", "w", newline='', encoding="utf-8") as f:
         datawrite = csv.writer(f)
+        datawrite.writerow(fields)
         datawrite.writerows(rows)
     print("File created")
 
@@ -164,7 +165,7 @@ def loadJSON():
     if disambig == 0:
         return
     try:
-        with open(pathname+".json","r") as f:
+        with open(pathname+".json","r", encoding="utf-8") as f:
             importDict = json.load(f)
             if importDict["meta"]["version"] != VERSION:
                 print("Version error - you might need to contact the developer to resolve")
